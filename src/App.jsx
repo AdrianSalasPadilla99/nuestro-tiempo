@@ -11,8 +11,9 @@ const loveSettings = {
   message: 'Mis dos neuronas y corazón son solo para ti',
 }
 
-const CLOUDINARY_CLOUD_NAME = 'nnolj1cl'
-const CLOUDINARY_UPLOAD_PRESET = 'ml_default'
+const SUPABASE_URL = 'https://gjnrogvqqtmlphikqdwu.supabase.co'
+const SUPABASE_ANON_KEY = 'sb_publishable_wJ5X-h9n6faegkzpxkN2Sw_H6gvALfb'
+const SUPABASE_PHOTOS_BUCKET = 'photos'
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -110,27 +111,29 @@ function App() {
     const timer = setInterval(() => setNow(new Date()), 1000)
 
     async function loadGallery() {
-      const [localPhotos, sharedResponse, cloudinaryResponse] = await Promise.all([
+      const [localPhotos, sharedResponse] = await Promise.all([
         getPhotos().catch(() => []),
-        fetch('./photos.json').then((response) => response.ok ? response.json() : []).catch(() => []),
-        fetch(`https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/raw/upload/nuestro-tiempo-gallery.json?v=${Date.now()}`)
-          .then((response) => response.ok ? response.json() : [])
-          .catch(() => []),
+        fetch(`${SUPABASE_URL}/rest/v1/photos?select=*&order=date_number.asc`, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }).then((response) => response.ok ? response.json() : []).catch(() => []),
       ])
 
       const sharedPhotos = Array.isArray(sharedResponse)
-        ? sharedResponse.map((photo, index) => ({ ...photo, id: photo.id || `shared-${index}` }))
-        : []
-
-      const cloudinaryPhotos = Array.isArray(cloudinaryResponse)
-        ? cloudinaryResponse.map((photo, index) => ({
-            ...photo,
-            id: photo.id || `cloudinary-${index}`,
+        ? sharedResponse.map((photo) => ({
+            id: photo.id,
+            name: photo.name,
+            url: photo.url,
+            dateNumber: photo.date_number,
+            photoDate: photo.photo_date,
+            createdAt: Number(photo.created_at || 0),
             shared: true,
           }))
         : []
 
-      const combined = [...cloudinaryPhotos, ...sharedPhotos, ...localPhotos]
+      const combined = [...sharedPhotos, ...localPhotos]
       const unique = [...new Map(combined.map((photo) => [photo.url || photo.id, photo])).values()]
       setPhotos(sortPhotosByDateNumber(unique))
     }
@@ -158,37 +161,64 @@ function App() {
     setUploadStatus('Subiendo recuerdos...')
 
     try {
-      const uploadedPhotos = []
       for (const [index, file] of pendingFiles.entries()) {
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
-        formData.append('folder', 'nuestro-tiempo')
-        formData.append('tags', 'nuestro-tiempo')
-        formData.append('context', `dateNumber=${dateNumber.trim()}|photoDate=${photoDate}|createdAt=${Date.now()}`)
+        const id = crypto.randomUUID()
+        const extension = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : 'jpg'
+        const storagePath = `${id}.${extension}`
 
-        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-          method: 'POST',
-          body: formData,
-        })
+        const uploadResponse = await fetch(
+          `${SUPABASE_URL}/storage/v1/object/${SUPABASE_PHOTOS_BUCKET}/${storagePath}`,
+          {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'x-upsert': 'true',
+            },
+            body: file,
+          },
+        )
 
-        if (!response.ok) {
-          const uploadError = await response.json().catch(() => null)
-          throw new Error(uploadError?.error?.message || `Cloudinary rechazó la subida (${response.status})`)
+        if (!uploadResponse.ok) {
+          const error = await uploadResponse.text()
+          throw new Error(error || 'Supabase rechazó la foto')
         }
-        const uploaded = await response.json()
 
+        const url = `${SUPABASE_URL}/storage/v1/object/public/${SUPABASE_PHOTOS_BUCKET}/${storagePath}`
         const photo = {
-          id: `cloudinary-${uploaded.public_id}`,
+          id,
           name: file.name,
-          url: uploaded.secure_url,
+          url,
           dateNumber: dateNumber.trim(),
           photoDate,
           createdAt: Date.now() - index,
           shared: true,
         }
+
+        const insertResponse = await fetch(`${SUPABASE_URL}/rest/v1/photos`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          },
+          body: JSON.stringify({
+            id,
+            name: photo.name,
+            url,
+            date_number: photo.dateNumber,
+            photo_date: photo.photoDate,
+            created_at: photo.createdAt,
+          }),
+        })
+
+        if (!insertResponse.ok) {
+          const error = await insertResponse.text()
+          throw new Error(error || 'No se pudo guardar la foto en Supabase')
+        }
+
         await savePhoto(photo)
-        uploadedPhotos.push(photo)
         setPhotos((current) => sortPhotosByDateNumber([photo, ...current]))
       }
 
@@ -201,9 +231,32 @@ function App() {
     }
   }
 
-  async function removePhoto(id) {
-    await deletePhoto(id)
-    setPhotos((current) => current.filter((photo) => photo.id !== id))
+  async function removePhoto(photo) {
+    if (photo.shared) {
+      await fetch(`${SUPABASE_URL}/rest/v1/photos?id=eq.${encodeURIComponent(photo.id)}`, {
+        method: 'DELETE',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      })
+
+      const storagePath = photo.url?.split(`/object/public/${SUPABASE_PHOTOS_BUCKET}/`)[1]
+      if (storagePath) {
+        await fetch(`${SUPABASE_URL}/storage/v1/object/${SUPABASE_PHOTOS_BUCKET}`, {
+          method: 'DELETE',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prefixes: [storagePath] }),
+        })
+      }
+    }
+
+    await deletePhoto(photo.id)
+    setPhotos((current) => current.filter((item) => item.id !== photo.id))
     setSelectedPhoto(null)
   }
 
@@ -326,7 +379,7 @@ function App() {
                 {selectedPhoto.photoDate && <span>{selectedPhoto.photoDate.split('-').reverse().join('/')}</span>}
               </div>
             )}
-            <button className="delete-button" onClick={() => removePhoto(selectedPhoto.id)}>Eliminar recuerdo</button>
+            <button className="delete-button" onClick={() => removePhoto(selectedPhoto)}>Eliminar recuerdo</button>
           </div>
         </div>
       )}

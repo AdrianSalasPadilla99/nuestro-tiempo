@@ -54,3 +54,11 @@ La URL tendrá esta forma: `https://TU_USUARIO.github.io/TU_REPOSITORIO/`
 Las fotos se suben automáticamente a Cloudinary usando el cloud `nnolj1cl` y el preset unsigned `ml_default`.
 
 El sitio crea un archivo público `nuestro-tiempo-gallery.json` con la lista de fotos. No es necesario activar **Resource List** ni compartir claves privadas.
+
+## Fotos compartidas con Supabase
+
+Las fotos se guardan en el bucket público `photos` de Supabase y sus datos en la tabla `photos`.
+
+El sitio usa la URL del proyecto `https://gjnrogvqqtmlphikqdwu.supabase.co` y una clave pública publishable.
+
+Antes de subir fotos, el bucket y las políticas de Storage deben permitir leer y subir archivos, y la tabla debe permitir leer, insertar y eliminar filas.
