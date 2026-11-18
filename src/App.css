@@ -121,6 +121,9 @@ footer { padding: 34px 20px; border-top: 1px solid #eadfdc; color: #978783; text
 .photo-details-modal { max-width: 460px; }
 .photo-details-modal h2 { margin-bottom: 20px; }
 .photo-card span { max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.photo-details { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 8px; align-items: center; }
-.photo-details strong, .photo-details span { padding: 8px 11px; border-radius: 999px; background: rgba(50,40,38,.82); color: white; font-size: 12px; }
-.photo-details + .delete-button { bottom: 12px; }
+.photo-card-info { position: absolute; z-index: 2; left: 14px; bottom: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; text-align: left; }
+.photo-card-info strong { padding: 8px 12px; border-radius: 999px; background: rgba(184,103,94,.94); color: #fff; box-shadow: 0 8px 18px rgba(58,38,35,.22); font-family: Georgia, serif; font-size: 16px; }
+.photo-card-info span { padding: 6px 10px; border-radius: 999px; background: rgba(40,32,30,.82); color: #fff; font-size: 12px; font-weight: 700; }
+.photo-details { position: absolute; z-index: 3; left: 16px; bottom: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.photo-details strong { padding: 10px 14px; border-radius: 999px; background: #b86a62; color: #fff; box-shadow: 0 8px 22px rgba(44,30,28,.28); font-family: Georgia, serif; font-size: 22px; }
+.photo-details span { padding: 8px 12px; border-radius: 999px; background: rgba(40,32,30,.88); color: #fff; font-size: 14px; font-weight: 700; }

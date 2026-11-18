@@ -245,7 +245,12 @@ function App() {
             {photos.map((photo, index) => (
               <button className={`photo-card card-${index % 6}`} key={photo.id} onClick={() => setSelectedPhoto(photo)}>
                 <img src={photo.url} alt={photo.name} />
-                <span>{photo.dateNumber ? `Cita ${photo.dateNumber}` : 'Ver recuerdo'}{photo.photoDate ? ` · ${photo.photoDate.split('-').reverse().join('/')}` : ''}</span>
+                {(photo.dateNumber || photo.photoDate) && (
+                  <div className="photo-card-info">
+                    {photo.dateNumber && <strong>Cita {photo.dateNumber}</strong>}
+                    {photo.photoDate && <span>{photo.photoDate.split('-').reverse().join('/')}</span>}
+                  </div>
+                )}
               </button>
             ))}
           </div>
