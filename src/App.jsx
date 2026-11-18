@@ -11,7 +11,7 @@ const loveSettings = {
   message: 'Mis dos neuronas y corazón son solo para ti',
 }
 
-const CLOUDINARY_CLOUD_NAME = 'nnolj1ci'
+const CLOUDINARY_CLOUD_NAME = 'nnolj1cl'
 const CLOUDINARY_UPLOAD_PRESET = 'ml_default'
 const CLOUDINARY_GALLERY_TAG = 'nuestro-tiempo'
 const CLOUDINARY_GALLERY_MANIFEST = 'nuestro-tiempo-gallery'
@@ -175,7 +175,10 @@ function App() {
           body: formData,
         })
 
-        if (!response.ok) throw new Error('Cloudinary rechazó la subida')
+        if (!response.ok) {
+          const uploadError = await response.json().catch(() => null)
+          throw new Error(uploadError?.error?.message || `Cloudinary rechazó la subida (${response.status})`)
+        }
         const uploaded = await response.json()
 
         const photo = {

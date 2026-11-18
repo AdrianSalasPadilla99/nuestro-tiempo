@@ -51,6 +51,6 @@ La URL tendrá esta forma: `https://TU_USUARIO.github.io/TU_REPOSITORIO/`
 
 ## Fotos compartidas con Cloudinary
 
-Las fotos se suben automáticamente a Cloudinary usando el cloud `nnolj1ci` y el preset unsigned `ml_default`.
+Las fotos se suben automáticamente a Cloudinary usando el cloud `nnolj1cl` y el preset unsigned `ml_default`.
 
 El sitio crea un archivo público `nuestro-tiempo-gallery.json` con la lista de fotos. No es necesario activar **Resource List** ni compartir claves privadas.
