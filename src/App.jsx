@@ -78,6 +78,13 @@ function App() {
   const [photos, setPhotos] = useState([])
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [counterMode, setCounterMode] = useState('hours')
+  const [pendingFiles, setPendingFiles] = useState([])
+  const [dateNumber, setDateNumber] = useState('')
+  const [photoDate, setPhotoDate] = useState(() => {
+    const today = new Date()
+    const offset = today.getTimezoneOffset()
+    return new Date(today.getTime() - offset * 60000).toISOString().slice(0, 10)
+  })
   const fileRef = useRef(null)
 
   useEffect(() => {
@@ -108,21 +115,34 @@ function App() {
     ['Años', elapsed.years], ['Meses', elapsed.months], ['Días', elapsed.days],
   ]
 
+  function choosePhotos(event) {
+    const files = [...event.target.files].filter((file) => file.type.startsWith('image/'))
+    if (files.length > 0) setPendingFiles(files)
+    event.target.value = ''
+  }
+
   async function uploadPhotos(event) {
-    const files = [...event.target.files]
-    for (const file of files) {
-      if (!file.type.startsWith('image/')) continue
+    event.preventDefault()
+    for (const file of pendingFiles) {
       const url = await new Promise((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = () => resolve(reader.result)
         reader.onerror = reject
         reader.readAsDataURL(file)
       })
-      const photo = { id: crypto.randomUUID(), name: file.name, url, createdAt: Date.now() }
+      const photo = {
+        id: crypto.randomUUID(),
+        name: file.name,
+        url,
+        dateNumber: dateNumber.trim(),
+        photoDate,
+        createdAt: Date.now(),
+      }
       await savePhoto(photo)
       setPhotos((current) => [photo, ...current])
     }
-    event.target.value = ''
+    setPendingFiles([])
+    setDateNumber('')
   }
 
   async function removePhoto(id) {
@@ -134,7 +154,7 @@ function App() {
   function exportGallery() {
     if (photos.length === 0) return
 
-    const gallery = photos.map(({ id, name, url, createdAt }) => ({ id, name, url, createdAt }))
+    const gallery = photos.map(({ id, name, url, dateNumber, photoDate, createdAt }) => ({ id, name, url, dateNumber, photoDate, createdAt }))
     const blob = new Blob([JSON.stringify(gallery, null, 2)], { type: 'application/json' })
     const downloadUrl = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -205,7 +225,7 @@ function App() {
             </button>
           )}
         </div>
-        <input ref={fileRef} className="hidden-input" type="file" accept="image/*" multiple onChange={uploadPhotos} />
+        <input ref={fileRef} className="hidden-input" type="file" accept="image/*" multiple onChange={choosePhotos} />
       </section>
 
       <section className="gallery-section">
@@ -225,7 +245,7 @@ function App() {
             {photos.map((photo, index) => (
               <button className={`photo-card card-${index % 6}`} key={photo.id} onClick={() => setSelectedPhoto(photo)}>
                 <img src={photo.url} alt={photo.name} />
-                <span>Ver recuerdo</span>
+                <span>{photo.dateNumber ? `Cita ${photo.dateNumber}` : 'Ver recuerdo'}{photo.photoDate ? ` · ${photo.photoDate.split('-').reverse().join('/')}` : ''}</span>
               </button>
             ))}
           </div>
@@ -239,8 +259,27 @@ function App() {
           <div className="photo-modal">
             <button className="close" onClick={() => setSelectedPhoto(null)}>×</button>
             <img src={selectedPhoto.url} alt={selectedPhoto.name} />
+            {(selectedPhoto.dateNumber || selectedPhoto.photoDate) && (
+              <div className="photo-details">
+                {selectedPhoto.dateNumber && <strong>Cita {selectedPhoto.dateNumber}</strong>}
+                {selectedPhoto.photoDate && <span>{selectedPhoto.photoDate.split('-').reverse().join('/')}</span>}
+              </div>
+            )}
             <button className="delete-button" onClick={() => removePhoto(selectedPhoto.id)}>Eliminar recuerdo</button>
           </div>
+        </div>
+      )}
+
+      {pendingFiles.length > 0 && (
+        <div className="overlay" onMouseDown={(event) => event.target === event.currentTarget && setPendingFiles([])}>
+          <form className="modal photo-details-modal" onSubmit={uploadPhotos}>
+            <button type="button" className="close" onClick={() => setPendingFiles([])}>×</button>
+            <p className="eyebrow">Nuevo recuerdo</p>
+            <h2>{pendingFiles.length === 1 ? 'Datos de la foto' : `${pendingFiles.length} fotos seleccionadas`}</h2>
+            <label>Número de cita<input type="number" min="1" value={dateNumber} onChange={(event) => setDateNumber(event.target.value)} placeholder="Ej. 8" required /></label>
+            <label>Fecha de la foto<input type="date" value={photoDate} onChange={(event) => setPhotoDate(event.target.value)} required /></label>
+            <button className="save-button" type="submit">Guardar recuerdos</button>
+          </form>
         </div>
       )}
     </main>

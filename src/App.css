@@ -118,3 +118,9 @@ footer { padding: 34px 20px; border-top: 1px solid #eadfdc; color: #978783; text
 .firework-four { --color: #c98ab2; right: 16%; bottom: 12%; width: 155px; animation-delay: 3.2s; }
 .firework-five { --color: #df8e7d; left: 44%; top: 2%; width: 130px; animation-delay: 4s; }
 @keyframes burst { 0%, 15% { opacity: 0; transform: scale(.08) rotate(-12deg); } 25% { opacity: .9; } 48% { opacity: .55; } 68%, 100% { opacity: 0; transform: scale(1.15) rotate(8deg); } }
+.photo-details-modal { max-width: 460px; }
+.photo-details-modal h2 { margin-bottom: 20px; }
+.photo-card span { max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.photo-details { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 8px; align-items: center; }
+.photo-details strong, .photo-details span { padding: 8px 11px; border-radius: 999px; background: rgba(50,40,38,.82); color: white; font-size: 12px; }
+.photo-details + .delete-button { bottom: 12px; }
