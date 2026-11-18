@@ -13,9 +13,6 @@ const loveSettings = {
 
 const CLOUDINARY_CLOUD_NAME = 'nnolj1cl'
 const CLOUDINARY_UPLOAD_PRESET = 'ml_default'
-const CLOUDINARY_GALLERY_TAG = 'nuestro-tiempo'
-const CLOUDINARY_GALLERY_MANIFEST = 'nuestro-tiempo-gallery'
-const CLOUDINARY_MANIFEST_URL = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/raw/upload/${CLOUDINARY_GALLERY_MANIFEST}.json`
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -116,7 +113,7 @@ function App() {
       const [localPhotos, sharedResponse, cloudinaryResponse] = await Promise.all([
         getPhotos().catch(() => []),
         fetch('./photos.json').then((response) => response.ok ? response.json() : []).catch(() => []),
-        fetch(`${CLOUDINARY_MANIFEST_URL}?v=${Date.now()}`)
+        fetch(`https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/raw/upload/nuestro-tiempo-gallery.json?v=${Date.now()}`)
           .then((response) => response.ok ? response.json() : [])
           .catch(() => []),
       ])
@@ -167,7 +164,7 @@ function App() {
         formData.append('file', file)
         formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
         formData.append('folder', 'nuestro-tiempo')
-        formData.append('tags', CLOUDINARY_GALLERY_TAG)
+        formData.append('tags', 'nuestro-tiempo')
         formData.append('context', `dateNumber=${dateNumber.trim()}|photoDate=${photoDate}|createdAt=${Date.now()}`)
 
         const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
@@ -195,7 +192,6 @@ function App() {
         setPhotos((current) => sortPhotosByDateNumber([photo, ...current]))
       }
 
-      await updateCloudinaryManifest(uploadedPhotos).catch(() => null)
       setUploadStatus('¡Recuerdos compartidos!')
       setPendingFiles([])
       setDateNumber('')
@@ -222,32 +218,6 @@ function App() {
     link.download = 'photos.json'
     link.click()
     URL.revokeObjectURL(downloadUrl)
-  }
-
-  async function updateCloudinaryManifest(newPhotos) {
-    let existing = []
-    try {
-      const response = await fetch(`${CLOUDINARY_MANIFEST_URL}?v=${Date.now()}`)
-      if (response.ok) existing = await response.json()
-    } catch {
-      existing = []
-    }
-
-    const combined = [...newPhotos, ...(Array.isArray(existing) ? existing : [])]
-    const unique = [...new Map(combined.map((photo) => [photo.url || photo.id, photo])).values()]
-    const content = JSON.stringify(sortPhotosByDateNumber(unique), null, 2)
-
-    const formData = new FormData()
-    formData.append('file', new Blob([content], { type: 'application/json' }), `${CLOUDINARY_GALLERY_MANIFEST}.json`)
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
-    formData.append('public_id', CLOUDINARY_GALLERY_MANIFEST)
-
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`, {
-      method: 'POST',
-      body: formData,
-    })
-
-    if (!response.ok) throw new Error('No se pudo actualizar el manifiesto compartido')
   }
 
   return (
