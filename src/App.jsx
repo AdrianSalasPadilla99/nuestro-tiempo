@@ -153,7 +153,13 @@ function App() {
       </header>
 
       <section className="hero">
-        <div className="glow glow-one" /><div className="glow glow-two" />
+        <div className="fireworks" aria-hidden="true">
+          <span className="firework firework-one" />
+          <span className="firework firework-two" />
+          <span className="firework firework-three" />
+          <span className="firework firework-four" />
+          <span className="firework firework-five" />
+        </div>
         <p className="eyebrow">Nuestra historia comenzó hace</p>
         <h1>{settings.nameOne} <span>&</span> {settings.nameTwo}</h1>
         <p className="message">“{settings.message}”</p>
