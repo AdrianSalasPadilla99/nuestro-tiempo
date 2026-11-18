@@ -11,6 +11,10 @@ const loveSettings = {
   message: 'Mis dos neuronas y corazón son solo para ti',
 }
 
+const CLOUDINARY_CLOUD_NAME = 'nnolj1ci'
+const CLOUDINARY_UPLOAD_PRESET = 'ml_default'
+const CLOUDINARY_GALLERY_TAG = 'nuestro-tiempo'
+
 function openDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1)
@@ -94,6 +98,7 @@ function App() {
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [counterMode, setCounterMode] = useState('hours')
   const [pendingFiles, setPendingFiles] = useState([])
+  const [uploadStatus, setUploadStatus] = useState('')
   const [dateNumber, setDateNumber] = useState('')
   const [photoDate, setPhotoDate] = useState(() => {
     const today = new Date()
@@ -106,16 +111,36 @@ function App() {
     const timer = setInterval(() => setNow(new Date()), 1000)
 
     async function loadGallery() {
-      const [localPhotos, sharedResponse] = await Promise.all([
+      const [localPhotos, sharedResponse, cloudinaryResponse] = await Promise.all([
         getPhotos().catch(() => []),
         fetch('./photos.json').then((response) => response.ok ? response.json() : []).catch(() => []),
+        fetch(`https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/list/${CLOUDINARY_GALLERY_TAG}.json`)
+          .then((response) => response.ok ? response.json() : { resources: [] })
+          .catch(() => ({ resources: [] })),
       ])
 
       const sharedPhotos = Array.isArray(sharedResponse)
         ? sharedResponse.map((photo, index) => ({ ...photo, id: photo.id || `shared-${index}` }))
         : []
 
-      setPhotos(sortPhotosByDateNumber([...sharedPhotos, ...localPhotos]))
+      const cloudinaryPhotos = Array.isArray(cloudinaryResponse.resources)
+        ? cloudinaryResponse.resources.map((resource) => {
+          const context = resource.context?.custom || {}
+          return {
+            id: `cloudinary-${resource.public_id}`,
+            name: resource.public_id,
+            url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/q_auto,f_auto/${resource.public_id}`,
+            dateNumber: context.dateNumber || '',
+            photoDate: context.photoDate || '',
+            createdAt: Number(context.createdAt || 0),
+            shared: true,
+          }
+        })
+        : []
+
+      const combined = [...cloudinaryPhotos, ...sharedPhotos, ...localPhotos]
+      const unique = [...new Map(combined.map((photo) => [photo.url || photo.id, photo])).values()]
+      setPhotos(sortPhotosByDateNumber(unique))
     }
 
     loadGallery()
@@ -138,26 +163,45 @@ function App() {
 
   async function uploadPhotos(event) {
     event.preventDefault()
-    for (const file of pendingFiles) {
-      const url = await new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result)
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
-      const photo = {
-        id: crypto.randomUUID(),
-        name: file.name,
-        url,
-        dateNumber: dateNumber.trim(),
-        photoDate,
-        createdAt: Date.now(),
+    setUploadStatus('Subiendo recuerdos...')
+
+    try {
+      for (const [index, file] of pendingFiles.entries()) {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
+        formData.append('folder', 'nuestro-tiempo')
+        formData.append('tags', CLOUDINARY_GALLERY_TAG)
+        formData.append('context', `dateNumber=${dateNumber.trim()}|photoDate=${photoDate}|createdAt=${Date.now()}`)
+
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!response.ok) throw new Error('Cloudinary rechazó la subida')
+        const uploaded = await response.json()
+
+        const photo = {
+          id: `cloudinary-${uploaded.public_id}`,
+          name: file.name,
+          url: uploaded.secure_url,
+          dateNumber: dateNumber.trim(),
+          photoDate,
+          createdAt: Date.now() - index,
+          shared: true,
+        }
+        await savePhoto(photo)
+        setPhotos((current) => sortPhotosByDateNumber([photo, ...current]))
       }
-      await savePhoto(photo)
-      setPhotos((current) => sortPhotosByDateNumber([photo, ...current]))
+
+      setUploadStatus('¡Recuerdos compartidos!')
+      setPendingFiles([])
+      setDateNumber('')
+      setTimeout(() => setUploadStatus(''), 2500)
+    } catch (error) {
+      setUploadStatus(`Error: ${error.message}`)
     }
-    setPendingFiles([])
-    setDateNumber('')
   }
 
   async function removePhoto(id) {
@@ -298,7 +342,9 @@ function App() {
             <h2>{pendingFiles.length === 1 ? 'Datos de la foto' : `${pendingFiles.length} fotos seleccionadas`}</h2>
             <label>Número de cita<input type="number" min="1" value={dateNumber} onChange={(event) => setDateNumber(event.target.value)} placeholder="Ej. 8" required /></label>
             <label>Fecha de la foto<input type="date" value={photoDate} onChange={(event) => setPhotoDate(event.target.value)} required /></label>
-            <button className="save-button" type="submit">Guardar recuerdos</button>
+            <button className="save-button" type="submit" disabled={Boolean(uploadStatus)}>
+              {uploadStatus || 'Guardar recuerdos'}
+            </button>
           </form>
         </div>
       )}

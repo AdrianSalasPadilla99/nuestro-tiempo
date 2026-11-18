@@ -48,3 +48,13 @@ npm run deploy
 4. En GitHub, abre **Settings > Pages** y selecciona la rama `gh-pages` como fuente.
 
 La URL tendrá esta forma: `https://TU_USUARIO.github.io/TU_REPOSITORIO/`
+
+## Fotos compartidas con Cloudinary
+
+Las fotos se suben automáticamente a Cloudinary usando el cloud `nnolj1ci` y el preset unsigned `ml_default`.
+
+Para que el sitio pueda mostrar todas las fotos a todos los visitantes, Cloudinary debe habilitar **Resource List** en:
+
+`Settings > Security > Restricted media types and delivery types`
+
+Busca la opción **Resource list** / **List resources** y habilítala para las etiquetas públicas. Las fotos pueden tardar unos segundos en aparecer después de subirlas.
