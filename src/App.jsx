@@ -260,6 +260,13 @@ function App() {
     setSelectedPhoto(null)
   }
 
+  const groupedPhotos = sortPhotosByDateNumber(photos).reduce((groups, photo) => {
+    const key = photo.dateNumber?.trim() || 'Sin número de cita'
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(photo)
+    return groups
+  }, new Map())
+
   return (
     <main className="app">
       <header className="nav">
@@ -333,16 +340,25 @@ function App() {
           </button>
         ) : (
           <div className="gallery">
-            {sortPhotosByDateNumber(photos).map((photo, index) => (
-              <button className={`photo-card card-${index % 6}`} key={photo.id} onClick={() => setSelectedPhoto(photo)}>
-                <img src={photo.url} alt={photo.name} />
-                {(photo.dateNumber || photo.photoDate) && (
-                  <div className="photo-card-info">
-                    {photo.dateNumber && <strong>Cita {photo.dateNumber}</strong>}
-                    {photo.photoDate && <span>{photo.photoDate.split('-').reverse().join('/')}</span>}
-                  </div>
-                )}
-              </button>
+            {Array.from(groupedPhotos.entries()).map(([key, group]) => (
+              <div key={key} className="photo-group">
+                <div className="group-header">
+                  <h3>{key === 'Sin número de cita' ? 'Sin número de cita' : `Cita ${key}`}</h3>
+                </div>
+                <div className="group-gallery">
+                  {group.map((photo, photoIndex) => (
+                    <button className={`photo-card card-${photoIndex % 6}`} key={photo.id} onClick={() => setSelectedPhoto(photo)}>
+                      <img src={photo.url} alt={photo.name} />
+                      {(photo.dateNumber || photo.photoDate) && (
+                        <div className="photo-card-info">
+                          {photo.dateNumber && <strong>Cita {photo.dateNumber}</strong>}
+                          {photo.photoDate && <span>{photo.photoDate.split('-').reverse().join('/')}</span>}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )}

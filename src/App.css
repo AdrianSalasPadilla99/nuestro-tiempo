@@ -70,7 +70,16 @@
 .empty-icon { width: 66px; height: 66px; margin: 0 auto 14px; display: grid; place-items: center; border: 1px solid #e3c9c3; border-radius: 50%; color: var(--rose); font-size: 34px; }
 .empty-gallery h3 { margin: 0 0 8px; font-family: Georgia, serif; font-size: 24px; }
 .empty-gallery p { color: #94837f; }
-.gallery { columns: 3 260px; column-gap: 16px; }
+.gallery { display: flex; flex-direction: column; gap: 34px; }
+.photo-group { width: 100%; }
+.group-header { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.group-header::after { content: ''; height: 1px; flex: 1; background: linear-gradient(90deg, #dec8c1, transparent); }
+.group-header h3 { margin: 0; color: var(--ink); font-family: Georgia, serif; font-size: 28px; font-weight: 500; }
+.group-gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.group-gallery .photo-card { margin: 0; }
+.group-gallery .photo-card img { height: 300px; }
+@media (max-width: 760px) { .group-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }.group-gallery .photo-card img { height: 220px; }.group-header h3 { font-size: 24px; } }
+@media (max-width: 420px) { .group-gallery { grid-template-columns: 1fr; }.group-gallery .photo-card img { height: 300px; } }
 .photo-card { position: relative; width: 100%; margin: 0 0 16px; padding: 0; border: 0; background: #eee; overflow: hidden; cursor: zoom-in; break-inside: avoid; }
 .photo-card img { width: 100%; display: block; transition: transform .5s ease; }
 .photo-card.card-0 img { aspect-ratio: 4/5; object-fit: cover; }.photo-card.card-1 img { aspect-ratio: 1/1; object-fit: cover; }.photo-card.card-2 img { aspect-ratio: 5/4; object-fit: cover; }.photo-card.card-3 img { aspect-ratio: 3/4; object-fit: cover; }.photo-card.card-4 img { aspect-ratio: 1/1.2; object-fit: cover; }.photo-card.card-5 img { aspect-ratio: 4/3; object-fit: cover; }
@@ -93,7 +102,6 @@ footer { padding: 34px 20px; border-top: 1px solid #eadfdc; color: #978783; text
 .detail-unit strong { font-family: Georgia, serif; font-size: 30px; line-height: 1; font-weight: 500; }
 .detail-unit span { margin-top: 8px; color: #9b8580; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
 .gallery-actions { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 34px; }
-.export-button { height: 48px; padding: 0 20px; border: 1px solid #e0cbc5; border-radius: 999px; background: rgba(255,255,255,.78); color: var(--ink); cursor: pointer; }
 .counter-switch { display: inline-flex; margin-bottom: 14px; padding: 4px; border: 1px solid #e2cbc5; border-radius: 999px; background: rgba(255,255,255,.65); }
 .counter-switch button { min-width: 105px; height: 38px; border: 0; border-radius: 999px; background: transparent; color: #8d7b77; cursor: pointer; font-size: 12px; font-weight: 700; }
 .counter-switch button.active { background: var(--ink); color: white; box-shadow: 0 7px 18px rgba(70,57,54,.14); }
