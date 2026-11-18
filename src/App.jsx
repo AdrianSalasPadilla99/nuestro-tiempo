@@ -260,12 +260,16 @@ function App() {
     setSelectedPhoto(null)
   }
 
-  const groupedPhotos = sortPhotosByDateNumber(photos).reduce((groups, photo) => {
+  const groupedPhotos = [...sortPhotosByDateNumber(photos).reduce((groups, photo) => {
     const key = photo.dateNumber?.trim() || 'Sin número de cita'
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key).push(photo)
     return groups
-  }, new Map())
+  }, new Map()).entries()].sort(([keyA], [keyB]) => {
+    if (keyA === 'Sin número de cita') return 1
+    if (keyB === 'Sin número de cita') return -1
+    return Number(keyB) - Number(keyA)
+  })
 
   return (
     <main className="app">
@@ -340,7 +344,7 @@ function App() {
           </button>
         ) : (
           <div className="gallery">
-            {Array.from(groupedPhotos.entries()).map(([key, group]) => (
+            {groupedPhotos.map(([key, group]) => (
               <div key={key} className="photo-group">
                 <div className="group-header">
                   <h3>{key === 'Sin número de cita' ? 'Sin número de cita' : `Cita ${key}`}</h3>
