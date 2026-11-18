@@ -195,7 +195,7 @@ function App() {
         setPhotos((current) => sortPhotosByDateNumber([photo, ...current]))
       }
 
-      await updateCloudinaryManifest(uploadedPhotos)
+      await updateCloudinaryManifest(uploadedPhotos).catch(() => null)
       setUploadStatus('¡Recuerdos compartidos!')
       setPendingFiles([])
       setDateNumber('')
@@ -241,8 +241,6 @@ function App() {
     formData.append('file', new Blob([content], { type: 'application/json' }), `${CLOUDINARY_GALLERY_MANIFEST}.json`)
     formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
     formData.append('public_id', CLOUDINARY_GALLERY_MANIFEST)
-    formData.append('overwrite', 'true')
-    formData.append('invalidate', 'true')
 
     const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`, {
       method: 'POST',
