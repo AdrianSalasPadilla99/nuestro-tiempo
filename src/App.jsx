@@ -260,19 +260,6 @@ function App() {
     setSelectedPhoto(null)
   }
 
-  function exportGallery() {
-    if (photos.length === 0) return
-
-    const gallery = sortPhotosByDateNumber(photos).map(({ id, name, url, dateNumber, photoDate, createdAt }) => ({ id, name, url, dateNumber, photoDate, createdAt }))
-    const blob = new Blob([JSON.stringify(gallery, null, 2)], { type: 'application/json' })
-    const downloadUrl = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = downloadUrl
-    link.download = 'photos.json'
-    link.click()
-    URL.revokeObjectURL(downloadUrl)
-  }
-
   return (
     <main className="app">
       <header className="nav">
@@ -328,11 +315,6 @@ function App() {
           <button className="upload-button" onClick={() => fileRef.current?.click()}>
             <span>＋</span> Añadir recuerdos
           </button>
-          {photos.length > 0 && (
-            <button className="export-button" onClick={exportGallery}>
-              Exportar galería
-            </button>
-          )}
         </div>
         <input ref={fileRef} className="hidden-input" type="file" accept="image/*" multiple onChange={choosePhotos} />
       </section>
