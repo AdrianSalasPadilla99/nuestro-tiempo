@@ -72,6 +72,21 @@ function differenceBetween(start, end) {
   return { years, months, days, hours, minutes, seconds }
 }
 
+function sortPhotosByDateNumber(items) {
+  return [...items].sort((a, b) => {
+    const aNumber = Number(a.dateNumber)
+    const bNumber = Number(b.dateNumber)
+
+    if (Number.isFinite(aNumber) && aNumber > 0 && (!Number.isFinite(bNumber) || bNumber <= 0)) return -1
+    if (Number.isFinite(bNumber) && bNumber > 0 && (!Number.isFinite(aNumber) || aNumber <= 0)) return 1
+    if (Number.isFinite(aNumber) && Number.isFinite(bNumber) && aNumber !== bNumber) return aNumber - bNumber
+
+    const dateDifference = String(a.photoDate || '').localeCompare(String(b.photoDate || ''))
+    if (dateDifference !== 0) return dateDifference
+    return (b.createdAt || 0) - (a.createdAt || 0)
+  })
+}
+
 function App() {
   const [settings] = useState(loveSettings)
   const [now, setNow] = useState(new Date())
@@ -100,7 +115,7 @@ function App() {
         ? sharedResponse.map((photo, index) => ({ ...photo, id: photo.id || `shared-${index}` }))
         : []
 
-      setPhotos([...sharedPhotos, ...localPhotos])
+      setPhotos(sortPhotosByDateNumber([...sharedPhotos, ...localPhotos]))
     }
 
     loadGallery()
@@ -139,7 +154,7 @@ function App() {
         createdAt: Date.now(),
       }
       await savePhoto(photo)
-      setPhotos((current) => [photo, ...current])
+      setPhotos((current) => sortPhotosByDateNumber([photo, ...current]))
     }
     setPendingFiles([])
     setDateNumber('')
@@ -154,7 +169,7 @@ function App() {
   function exportGallery() {
     if (photos.length === 0) return
 
-    const gallery = photos.map(({ id, name, url, dateNumber, photoDate, createdAt }) => ({ id, name, url, dateNumber, photoDate, createdAt }))
+    const gallery = sortPhotosByDateNumber(photos).map(({ id, name, url, dateNumber, photoDate, createdAt }) => ({ id, name, url, dateNumber, photoDate, createdAt }))
     const blob = new Blob([JSON.stringify(gallery, null, 2)], { type: 'application/json' })
     const downloadUrl = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -242,7 +257,7 @@ function App() {
           </button>
         ) : (
           <div className="gallery">
-            {photos.map((photo, index) => (
+            {sortPhotosByDateNumber(photos).map((photo, index) => (
               <button className={`photo-card card-${index % 6}`} key={photo.id} onClick={() => setSelectedPhoto(photo)}>
                 <img src={photo.url} alt={photo.name} />
                 {(photo.dateNumber || photo.photoDate) && (
