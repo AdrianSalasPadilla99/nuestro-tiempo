@@ -14,6 +14,8 @@ const loveSettings = {
 const CLOUDINARY_CLOUD_NAME = 'nnolj1ci'
 const CLOUDINARY_UPLOAD_PRESET = 'ml_default'
 const CLOUDINARY_GALLERY_TAG = 'nuestro-tiempo'
+const CLOUDINARY_GALLERY_MANIFEST = 'nuestro-tiempo-gallery'
+const CLOUDINARY_MANIFEST_URL = `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/raw/upload/${CLOUDINARY_GALLERY_MANIFEST}.json`
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -114,28 +116,21 @@ function App() {
       const [localPhotos, sharedResponse, cloudinaryResponse] = await Promise.all([
         getPhotos().catch(() => []),
         fetch('./photos.json').then((response) => response.ok ? response.json() : []).catch(() => []),
-        fetch(`https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/list/${CLOUDINARY_GALLERY_TAG}.json`)
-          .then((response) => response.ok ? response.json() : { resources: [] })
-          .catch(() => ({ resources: [] })),
+        fetch(`${CLOUDINARY_MANIFEST_URL}?v=${Date.now()}`)
+          .then((response) => response.ok ? response.json() : [])
+          .catch(() => []),
       ])
 
       const sharedPhotos = Array.isArray(sharedResponse)
         ? sharedResponse.map((photo, index) => ({ ...photo, id: photo.id || `shared-${index}` }))
         : []
 
-      const cloudinaryPhotos = Array.isArray(cloudinaryResponse.resources)
-        ? cloudinaryResponse.resources.map((resource) => {
-          const context = resource.context?.custom || {}
-          return {
-            id: `cloudinary-${resource.public_id}`,
-            name: resource.public_id,
-            url: `https://res.cloudinary.com/${CLOUDINARY_CLOUD_NAME}/image/upload/q_auto,f_auto/${resource.public_id}`,
-            dateNumber: context.dateNumber || '',
-            photoDate: context.photoDate || '',
-            createdAt: Number(context.createdAt || 0),
+      const cloudinaryPhotos = Array.isArray(cloudinaryResponse)
+        ? cloudinaryResponse.map((photo, index) => ({
+            ...photo,
+            id: photo.id || `cloudinary-${index}`,
             shared: true,
-          }
-        })
+          }))
         : []
 
       const combined = [...cloudinaryPhotos, ...sharedPhotos, ...localPhotos]
@@ -166,6 +161,7 @@ function App() {
     setUploadStatus('Subiendo recuerdos...')
 
     try {
+      const uploadedPhotos = []
       for (const [index, file] of pendingFiles.entries()) {
         const formData = new FormData()
         formData.append('file', file)
@@ -192,9 +188,11 @@ function App() {
           shared: true,
         }
         await savePhoto(photo)
+        uploadedPhotos.push(photo)
         setPhotos((current) => sortPhotosByDateNumber([photo, ...current]))
       }
 
+      await updateCloudinaryManifest(uploadedPhotos)
       setUploadStatus('¡Recuerdos compartidos!')
       setPendingFiles([])
       setDateNumber('')
@@ -221,6 +219,34 @@ function App() {
     link.download = 'photos.json'
     link.click()
     URL.revokeObjectURL(downloadUrl)
+  }
+
+  async function updateCloudinaryManifest(newPhotos) {
+    let existing = []
+    try {
+      const response = await fetch(`${CLOUDINARY_MANIFEST_URL}?v=${Date.now()}`)
+      if (response.ok) existing = await response.json()
+    } catch {
+      existing = []
+    }
+
+    const combined = [...newPhotos, ...(Array.isArray(existing) ? existing : [])]
+    const unique = [...new Map(combined.map((photo) => [photo.url || photo.id, photo])).values()]
+    const content = JSON.stringify(sortPhotosByDateNumber(unique), null, 2)
+
+    const formData = new FormData()
+    formData.append('file', new Blob([content], { type: 'application/json' }), `${CLOUDINARY_GALLERY_MANIFEST}.json`)
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
+    formData.append('public_id', CLOUDINARY_GALLERY_MANIFEST)
+    formData.append('overwrite', 'true')
+    formData.append('invalidate', 'true')
+
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`, {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!response.ok) throw new Error('No se pudo actualizar el manifiesto compartido')
   }
 
   return (
